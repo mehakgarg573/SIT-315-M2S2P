@@ -1,0 +1,79 @@
+//Mehak SIT-315, Task-M2S2P
+//Adding comments to the code provided
+#include <iostream>
+#include <stdlib.h>
+#include <pthread.h>
+#include <thread>
+#include <time.h>
+#include <unistd.h>
+#include <string>
+using namespace std;
+
+#define NUM_THREADS 8
+#define MAX 1000000
+pthread_mutex_t mutx;
+
+int data[MAX];
+long global_sum = 0;
+
+void *sum(void *threadid)
+{
+    long tid;
+    long sum = 0;
+    tid = (long)threadid;
+
+    // Data array's processing range for each thread specified.
+    int range = MAX / NUM_THREADS;
+    int start = tid * range;
+    int end = start + range;
+
+    // Calculating sum of the data elements in the thread's range.
+    for (int i = start; i < end; i++)
+    {
+        sum += data[i];
+    }
+
+    // Using a mutex lock to ensure that global sum is updated in a sequence.
+    pthread_mutex_lock(&mutx);
+    global_sum += sum;
+
+    // Unlocking the lock to enable other threads to access global sum.
+    pthread_mutex_unlock(&mutx);
+
+    //  Exiting the thread
+    pthread_exit(NULL);
+}
+
+int main(int argc, char *argv[])
+{
+    // Initializing the mutex lock
+    pthread_mutex_init(&mutx, NULL);
+
+    // Determines the number of cores
+    int cores = std::thread::hardware_concurrency();
+    cout << " the number of cores on this machine = " << cores << endl;
+
+    // Initializing data array with random values
+    srand(time(NULL));
+    for (int i = 0; i < MAX; i++)
+    {
+        data[i] = rand() % 20;
+    }
+
+    // Creating a pool of threads that is used to process data
+    pthread_t threads[NUM_THREADS];
+    long tid = 0;
+    for (tid = 0; tid < NUM_THREADS; tid++)
+    {
+        pthread_create(&threads[tid], NULL, sum, (void *)tid);
+    }
+
+    // Waiting for all threads to be completed 
+    for (tid = 0; tid < NUM_THREADS; tid++)
+    {
+        pthread_join(threads[tid], NULL);
+    }
+
+    // Printing the final sum
+    cout << "the final sum =" << global_sum << endl;
+}
